@@ -1,0 +1,9 @@
+{
+  "name": "syncHistory",
+  "version": "1.0.0",
+  "description": "历史跨设备同步（每个用户一条整份备份）",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1,0 +1,20 @@
+.step {
+  display: flex;
+  margin: 20rpx 0;
+}
+.num {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #ff7a45;
+  color: #fff;
+  text-align: center;
+  line-height: 48rpx;
+  font-size: 26rpx;
+  margin-right: 20rpx;
+  flex: 0 0 48rpx;
+}
+.st { font-size: 28rpx; font-weight: 600; display: block; }
+.sd { font-size: 24rpx; color: #666; display: block; margin-top: 4rpx; }
+.tip { font-size: 24rpx; color: #666; margin: 10rpx 0; }
+.set-row { padding: 16rpx 0; }

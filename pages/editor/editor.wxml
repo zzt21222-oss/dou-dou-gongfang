@@ -1,0 +1,176 @@
+<view class="page {{a11yClass}}">
+  <!-- 预览画布 -->
+  <view class="card">
+    <view class="canvas-wrap" id="wrap">
+      <canvas type="2d" id="cv" class="bead-canvas"
+              style="width:{{cvW}}px;height:{{cvH}}px"
+              bindtouchstart="onTouch" bindtouchmove="onTouch" bindtouchend="onTouch" bindtouchcancel="onTouch"></canvas>
+    </view>
+    <!-- 加载/提取失败时把错误直接显示在页面上，方便用户截图 -->
+    <view wx:if="{{lastError}}" class="error-box">
+      <text class="error-text">{{lastError}}</text>
+    </view>
+    <!-- 原图预览：确认图片真的加载进来了 -->
+    <view wx:if="{{previewSrc}}" class="preview-box">
+      <text class="preview-label">原图预览（确认图片已加载）：</text>
+      <image src="{{previewSrc}}" mode="aspectFit" class="preview-img" show-menu-by-longpress="{{false}}" />
+    </view>
+    <!-- 诊断面板：显示像素提取与颜色映射统计，方便截图排查 -->
+    <view wx:if="{{showDiag && diagInfo}}" class="diag-box">
+      <text class="diag-text">{{diagInfo}}</text>
+    </view>
+    <view class="board-info" wx:if="{{boards}}">
+      <text class="muted">图纸超过单板尺寸，已自动分为 {{boards.boards.length}} 块（{{boards.rows}}×{{boards.cols}}），序号见图上</text>
+    </view>
+    <view class="board-info" wx:else>
+      <text class="muted">尺寸 {{w}} × {{h}} 格　总 {{totalCount}} 粒</text>
+    </view>
+  </view>
+
+  <!-- 底板形状与预设 -->
+  <view class="card">
+    <text class="title">底板形状与预设</text>
+    <view class="row between set-row">
+      <text>底板形状</text>
+      <picker mode="selector" range="{{shapeNames}}" value="{{shapeIndex}}" bindchange="onShape">
+        <view class="picker">{{shapeNames[shapeIndex]}}</view>
+      </picker>
+    </view>
+    <view class="row wrap" style="margin-top:10rpx">
+      <view wx:for="{{presets}}" wx:key="label" class="chip" bindtap="onPreset" data-i="{{index}}">{{item.label}}</view>
+    </view>
+    <view class="row wrap" style="margin-top:10rpx">
+      <view class="chip chip-accent" bindtap="toggleTemplate">套用模板图形</view>
+    </view>
+  </view>
+
+  <!-- 设置 -->
+  <view class="card">
+    <text class="title">图纸设置</text>
+    <view class="row between set-row">
+      <text>色号系统</text>
+      <picker mode="selector" range="{{brandNames}}" value="{{brandIndex}}" bindchange="onBrand">
+        <view class="picker">{{brandNames[brandIndex]}} · {{paletteInfo.count}} 色</view>
+      </picker>
+    </view>
+    <!-- 旧作品色号系统无法识别：说明为什么必须先手选，否则预览导出会被拦下（复核 R3） -->
+    <view wx:if="{{brandUnknown}}" class="hint" style="color:#c0392b;font-weight:600">无法识别这张旧图纸的色号系统。请在上面选好正确的品牌：换算完成后才能预览与导出，否则色号可能买不到对应的豆子。</view>
+    <view class="hint" wx:else>每一格都对应 {{paletteInfo.brandName}} 能买到实物的色号（{{paletteInfo.size}}）。换品牌只换色号，图案不变。</view>
+    <view class="row between set-row">
+      <text>目标宽度</text>
+      <view class="input-wrap">
+        <input class="num-input" type="number" value="{{w}}" bindinput="onW" disabled="{{moduleCount}}" />
+        <text class="unit">粒</text>
+      </view>
+    </view>
+    <view class="row between set-row">
+      <text>目标高度</text>
+      <view class="input-wrap">
+        <input class="num-input" type="number" value="{{h}}" bindinput="onH" disabled="{{lockRatio || moduleCount}}" />
+        <text class="unit">{{lockRatio ? '粒（自动）' : '粒'}}</text>
+      </view>
+    </view>
+    <view class="row between set-row">
+      <text>🔒 锁定比例</text>
+      <switch checked="{{lockRatio}}" bindchange="onLockRatio" color="#ff7a45"/>
+    </view>
+    <view class="hint">{{lockRatio ? '已锁定：改宽度自动算高度、改高度自动算宽度，图案不拉伸。' : '已解锁：宽度/高度可分别自由填，图案会按非等比拉伸变形。'}}</view>
+    <view class="row between set-row">
+      <text>缩放方式</text>
+      <picker mode="selector" range="{{fitModes}}" value="{{fitModeIndex}}" bindchange="onFitMode">
+        <view class="picker">{{fitModes[fitModeIndex]}}</view>
+      </picker>
+    </view>
+    <view class="hint">留边：整张图完整放进格子，四周留白不裁图。裁切：铺满格子，超出画面的部分裁掉。</view>
+    <view class="slider-row">
+      <text class="slider-label">最多颜色数</text>
+      <slider class="slider" min="2" max="30" value="{{colorCount}}" bindchange="onColorCount" show-value/>
+    </view>
+    <view class="hint">颜色越多种类越接近原图，但要买的豆子也越多。超过上限会自动把相近的颜色合并。</view>
+    <view class="row between set-row">
+      <text>显示网格线</text>
+      <switch checked="{{showGrid}}" bindchange="onShowGrid" color="#ff7a45"/>
+    </view>
+    <view class="row between set-row">
+      <text>显示分板线</text>
+      <switch checked="{{showBoardLines}}" bindchange="onShowBoardLines" color="#ff7a45"/>
+    </view>
+  </view>
+
+  <!-- 方案C：网格对齐模块数 -->
+  <view class="card">
+    <text class="title">网格对齐模块数（像素画 / 二维码）</text>
+    <view class="hint">输入原图「模块数」（如二维码 41），网格会改成 模块数×倍数 的正方形，每格正好对齐一个模块，消除错位与缺失。留空则不启用。</view>
+    <view class="row between set-row">
+      <text>原图模块数</text>
+      <view class="input-wrap">
+        <input class="num-input" type="number" value="{{moduleCount}}" bindinput="onModuleCount" placeholder="留空不启用" />
+        <text class="unit">模块</text>
+      </view>
+    </view>
+    <view class="row between set-row">
+      <text>自动检测</text>
+      <button class="btn btn-ghost btn-sm" bindtap="onAutoDetect">扫描图片</button>
+    </view>
+    <view class="row between set-row">
+      <text>网格倍数</text>
+      <picker mode="selector" range="{{multipleOptions}}" value="{{multipleIndex}}" bindchange="onMultiple">
+        <view class="picker">{{multipleOptions[multipleIndex]}}</view>
+      </picker>
+    </view>
+    <view class="hint" wx:if="{{alignedW}}">网格尺寸：{{alignedW}} × {{alignedH}}（每模块 {{gridMultiple}} 格）</view>
+    <view class="hint warn" wx:if="{{alignedWarn}}">{{alignedWarn}}</view>
+    <view class="hint" wx:if="{{moduleCount}}">已启用对齐：下方「目标宽度 / 高度」以对齐结果为准（已锁定不可改）。</view>
+  </view>
+
+  <!-- 编辑工具 -->
+  <view class="card">
+    <text class="title">编辑工具</text>
+    <view class="row wrap">
+      <view class="tool {{activeTool==='recolor'?'active':''}}" bindtap="setTool" data-tool="recolor">单点换色</view>
+      <view class="tool {{activeTool==='fill'?'active':''}}" bindtap="setTool" data-tool="fill">区域填充</view>
+      <view class="tool {{activeTool==='brush'?'active':''}}" bindtap="setTool" data-tool="brush">画笔</view>
+      <view class="tool {{activeTool==='eraser'?'active':''}}" bindtap="setTool" data-tool="eraser">橡皮擦</view>
+      <view class="tool tool-history {{canUndo?'':'tool-disabled'}}" bindtap="undo">撤销</view>
+      <view class="tool tool-history {{canRedo?'':'tool-disabled'}}" bindtap="redo">重做</view>
+    </view>
+    <view class="row" style="margin-top:12rpx">
+      <text class="muted">当前颜色：</text>
+      <view class="swatch" style="background:{{activeColor.hex}}"></view>
+      <text class="muted">{{activeColor.code}} {{activeColor.name}}</text>
+    </view>
+  </view>
+
+  <!-- 色板 -->
+  <view class="card">
+    <text class="title">当前色板（点击选用 / 锁图标防替换）</text>
+    <view class="palette">
+      <view wx:for="{{palettePanel}}" wx:key="id" class="pcell" bindtap="selectColor" data-id="{{item.id}}">
+        <view class="swatch" style="background:{{item.hex}}"></view>
+        <view class="pinfo">
+          <text class="pcode">{{item.code}}</text>
+          <text class="pcount">{{item.count}}粒</text>
+        </view>
+                <view class="lock {{item.locked?'on':''}}" catchtap="toggleLock" data-id="{{item.id}}" aria-role="button" aria-label="{{item.code}}，{{item.locked?'已锁定，点击解锁':'未锁定，点击锁定'}}">{{item.locked ? '已锁' : '锁'}}</view>
+      </view>
+    </view>
+  </view>
+
+  <button class="btn btn-primary btn-block" bindtap="goPreview">下一步：预览与导出</button>
+  <view style="height:180rpx"></view>
+
+  <view class="fab" bindtap="regenerate">重新生成</view>
+
+  <!-- 模板弹窗 -->
+  <view wx:if="{{showTemplate}}" class="modal-mask" bindtap="toggleTemplate">
+    <view class="modal" catchtap="noop">
+      <text class="title">选择模板图形</text>
+      <view class="tpl-list">
+        <view wx:for="{{templateList}}" wx:key="key" class="tpl-item" bindtap="applyTemplate" data-key="{{item.key}}" data-name="{{item.name}}">
+          <text>{{item.name}}</text>
+        </view>
+      </view>
+      <button class="btn btn-ghost btn-block" bindtap="toggleTemplate">取消</button>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,88 @@
+<view class="page {{a11yClass}}">
+  <view class="card">
+    <view class="row between">
+      <text class="title">预览</text>
+      <view class="row">
+        <view class="mode {{mode==='pixel'?'active':''}}" bindtap="setMode" data-mode="pixel">像素</view>
+        <view class="mode {{mode==='symbol'?'active':''}}" bindtap="setMode" data-mode="symbol">符号</view>
+        <view class="mode {{mode==='bead'?'active':''}}" bindtap="setMode" data-mode="bead">豆子</view>
+      </view>
+    </view>
+    <view class="canvas-wrap" id="wrap">
+      <canvas type="2d" id="cv" class="bead-canvas" style="width:{{cvW}}px;height:{{cvH}}px"></canvas>
+    </view>
+    <text class="muted">尺寸 {{w}} × {{h}} 格　总 {{totalCount}} 粒　颜色 {{palettePanel.length}} 种</text>
+  </view>
+
+  <!-- 色号系统未知（旧作品）：先说清楚为什么拦住导出，再让用户当场选 -->
+  <view class="card" wx:if="{{brandUnknown}}" style="border:2rpx solid #ff7a45;background:#fff7f2">
+    <text class="title" style="color:#c0392b">色号系统待确认</text>
+    <text class="muted" style="display:block;margin:8rpx 0 16rpx">这张图纸是旧版本保存的，无法识别它用的是哪个品牌的色号。选好品牌后才能导出——否则图纸与采购清单上的色号可能买不到对应的豆子。</text>
+    <view class="row between" style="align-items:center">
+      <text>色号系统</text>
+      <picker mode="selector" range="{{brandNames}}" bindchange="onPickBrand">
+        <view style="padding:10rpx 24rpx;border:2rpx solid #ddd;border-radius:10rpx;background:#fff">点击选择品牌</view>
+      </picker>
+    </view>
+    <text class="muted" style="display:block;margin-top:12rpx">换算只改色号，图案与颗粒数不变。</text>
+  </view>
+
+  <view class="card">
+    <text class="title">材料清单 (BOM)</text>
+    <view class="bom-head">
+      <text class="col c1">色号</text>
+      <text class="col c2">名称</text>
+      <text class="col c3">数量</text>
+      <text class="col c4">建议购(+5%)</text>
+    </view>
+    <view class="bom-row" wx:for="{{palettePanel}}" wx:key="id">
+      <view class="swatch" style="background:{{item.hex}}"></view>
+      <text class="col c1">{{item.code}}</text>
+      <text class="col c2">{{item.name}}</text>
+      <text class="col c3">{{item.count}}</text>
+      <text class="col c4">{{item.suggest}}</text>
+    </view>
+    <view class="divider"></view>
+    <view class="row between"><text>合计</text><text class="muted">{{totalCount}} 粒</text></view>
+  </view>
+
+  <view class="card">
+    <button class="btn btn-primary btn-block" bindtap="exportImage">保存图纸到相册（带色号）</button>
+    <view style="height:16rpx"></view>
+    <button class="btn btn-ghost btn-block" bindtap="exportPlain">保存纯图纸（无色号）</button>
+    <view style="height:16rpx"></view>
+    <button class="btn btn-primary btn-block" bindtap="generatePrint">生成打印图纸</button>
+    <text class="muted" style="font-size:22rpx;display:block;margin-top:8rpx">按 A4 横向、四周 10mm 边距、最小字号 8pt 排版：每页纸面尺寸完全相同，每格直接印品牌色号，页脚带页码与拼接位置；完整色卡与采购清单单独出页。生成前会先告诉你一共几张</text>
+    <view style="height:16rpx"></view>
+    <button class="btn btn-ghost btn-block" bindtap="copyBOM">复制采购清单</button>
+    <view style="height:16rpx"></view>
+    <button class="btn btn-ghost btn-block" bindtap="openBuy">采购助手</button>
+    <view style="height:16rpx"></view>
+    <button class="btn btn-ghost btn-block" bindtap="saveHistory">{{recId ? '保存修改' : '保存到历史'}}</button>
+    <block wx:if="{{recId}}">
+      <view style="height:16rpx"></view>
+      <button class="btn btn-ghost btn-block" bindtap="saveAsNew">另存为新图纸</button>
+    </block>
+    <view style="height:16rpx"></view>
+    <button class="btn btn-ghost btn-block" open-type="share">分享给好友</button>
+  </view>
+
+  <!-- 采购助手弹窗 -->
+  <view wx:if="{{showBuy}}" class="modal-mask" bindtap="closeBuy">
+    <view class="modal" catchtap="noop">
+      <text class="title">采购助手（点击复制购买词）</text>
+      <view class="buy-list">
+        <view wx:for="{{buyList}}" wx:key="id" class="buy-item" bindtap="copyBuy" data-item="{{item}}">
+          <view class="swatch" style="background:{{item.hex}}"></view>
+          <view class="binfo">
+            <text class="bcode">{{item.code}} {{item.name}}</text>
+            <text class="bcount">需 {{item.count}} 粒 · 购 {{item.suggest}}</text>
+          </view>
+          <text class="bgo">复制</text>
+        </view>
+      </view>
+      <button class="btn btn-ghost btn-block" bindtap="closeBuy">关闭</button>
+    </view>
+  </view>
+  <view style="height:40rpx"></view>
+</view>

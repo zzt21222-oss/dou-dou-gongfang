@@ -1,0 +1,47 @@
+<view class="page">
+  <view class="card">
+    <text class="title">试色器</text>
+    <text class="muted">拍照或选图，识别最接近的拼豆色号，方便对照实物豆。</text>
+    <view class="brand-row">
+      <text class="brand-label">色号系统</text>
+      <picker mode="selector" range="{{brandNames}}" value="{{brandIndex}}" bindchange="onBrand">
+        <view class="brand-picker">{{brandName}} · {{brandCount}} 色</view>
+      </picker>
+    </view>
+    <view class="row wrap" style="margin-top:16rpx">
+      <button class="btn btn-ghost mini" bindtap="chooseAlbum">相册</button>
+      <button class="btn btn-ghost mini" bindtap="chooseCamera">拍照</button>
+    </view>
+    <view class="canvas-wrap">
+      <canvas type="2d" id="cv" class="pick-canvas"></canvas>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{mainHex}}">
+    <text class="title">画面主色</text>
+    <view class="row" style="margin-top:12rpx">
+      <view class="big-swatch" style="background:{{mainHex}}"></view>
+      <view class="col">
+        <text class="muted">识别到的主色</text>
+        <text class="hex">{{mainHex}}</text>
+      </view>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{matches.length}}">
+    <text class="title">最接近的拼豆色（点击复制）</text>
+    <view class="match-list">
+      <view wx:for="{{matches}}" wx:key="hex" class="match-item" bindtap="copyOne" data-item="{{item}}">
+        <view class="swatch" style="background:{{item.hex}}"></view>
+        <view class="minfo">
+          <text class="mbrand">{{item.brand}}</text>
+          <text class="mcode">{{item.code}} {{item.name}}</text>
+          <text class="mhex">{{item.hex}}</text>
+        </view>
+        <text class="mcount">{{item.count}}px</text>
+      </view>
+    </view>
+  </view>
+
+  <view style="height:40rpx"></view>
+</view>

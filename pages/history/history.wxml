@@ -1,0 +1,52 @@
+<view class="page">
+  <view class="card row between">
+    <text class="title">我的图纸</text>
+    <view class="row">
+      <view class="guide-btn" bindtap="goGuide">新手引导</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="row between">
+      <text class="muted">云端备份 {{cloud ? '可用' : '未连接'}}（图纸存本机，可同步云端防丢失）</text>
+    </view>
+    <view class="row" style="margin-top:12rpx">
+      <button class="btn btn-ghost mini" bindtap="syncCloud">{{syncing ? '同步中…' : '同步到云端'}}</button>
+      <button class="btn btn-ghost mini" bindtap="restoreFromCloud">从云端恢复</button>
+    </view>
+    <view wx:if="{{cloudMeta}}" class="muted small" style="margin-top:8rpx"><text>最近{{cloudMeta.text}}</text></view>
+    <!-- 有本机备份才出现：云端恢复覆盖错了可以一键还原 -->
+    <view wx:if="{{backup}}" class="bak-row">
+      <text class="muted small">本机备份 {{backup.count}} 张 · {{backup.text}}</text>
+      <text class="bak-btn" bindtap="rollbackBackup">回滚</text>
+    </view>
+  </view>
+
+  <!-- 空状态：引导去制作 -->
+  <view wx:if="{{list.length===0}}" class="card empty">
+    <view class="empty-grid">
+      <view class="eg-cell" wx:for="{{[1,2,3,4,5,6,7,8,9]}}" wx:key="*this"></view>
+    </view>
+    <text class="empty-title">还没有作品</text>
+    <text class="muted">去「制作」页把图片变成你的第一张拼豆图纸吧</text>
+    <button class="btn btn-primary empty-btn" bindtap="goMake">去制作</button>
+  </view>
+
+  <!-- 作品墙：点卡片编辑，长按删除 -->
+  <view wx:if="{{list.length>0}}" class="wall">
+    <view class="wall-item" wx:for="{{list}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="open" bindlongpress="del">
+      <view class="thumb-wrap">
+        <image wx:if="{{item.thumb}}" class="thumb" src="{{item.thumb}}" mode="aspectFit"
+               data-id="{{item.id}}" binderror="onThumbError" />
+        <view wx:else class="thumb thumb-loading"><text>生成中…</text></view>
+      </view>
+      <view class="meta">
+        <text class="iname">{{item.name}}</text>
+        <text class="muted small">{{item.size}} · {{item.colors}} 色 · {{item.date}}</text>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{list.length>0}}" class="muted tip"><text>长按图纸可删除</text></view>
+  <view style="height:40rpx"></view>
+</view>

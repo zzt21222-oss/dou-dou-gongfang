@@ -1,0 +1,32 @@
+<view class="page {{a11yClass}}">
+  <view class="card">
+    <text class="title">三步做出你的拼豆图纸</text>
+    <view class="step"><text class="num">1</text><view><text class="st">导入与调整</text><text class="sd">从相册或拍照导入，调节亮度/对比度/饱和度，旋转镜像、裁剪、去白底，让颜色更干净。</text></view></view>
+    <view class="step"><text class="num">2</text><view><text class="st">降色与编辑</text><text class="sd">设定底板尺寸，选择颜色数量与降色算法，或用品牌色板。可单点换色、区域填充、画笔橡皮微调。</text></view></view>
+    <view class="step"><text class="num">3</text><view><text class="st">预览与导出</text><text class="sd">切换像素/符号/豆子预览，查看材料清单，保存高清图纸到相册、复制采购清单或分享好友。</text></view></view>
+  </view>
+
+  <view class="card">
+    <text class="title">小贴士</text>
+    <view class="tip">· 颜色越少，风格越简约、拼起来越快。</view>
+    <view class="tip">· 勾选“仅用该品牌色板”可保证每颗豆都能买到对应颜色。</view>
+    <view class="tip">· 超过单板尺寸会自动分块并标序号，按顺序拼接即可。</view>
+    <view class="tip">· 锁定颜色后，区域填充不会误改它。</view>
+  </view>
+
+  <view class="card">
+    <text class="title">无障碍设置</text>
+    <view class="row between set-row">
+      <text>大字体模式</text>
+      <switch checked="{{largeFont}}" bindchange="onLargeFont" color="#ff7a45"/>
+    </view>
+    <view class="row between set-row">
+      <text>高对比模式</text>
+      <switch checked="{{highContrast}}" bindchange="onHighContrast" color="#ff7a45"/>
+    </view>
+    <text class="muted">开启后，制作与预览页文字更大、对比更强，方便暗光环境使用。</text>
+  </view>
+
+  <button class="btn btn-primary btn-block" bindtap="goMake">开始制作</button>
+  <view style="height:40rpx"></view>
+</view>

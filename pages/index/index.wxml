@@ -1,0 +1,63 @@
+<view class="page {{a11yClass}}">
+  <!-- Hero 顶部 -->
+  <view class="hero">
+    <text class="hero-title">豆豆工坊</text>
+  </view>
+
+  <!-- 大上传卡 -->
+  <view class="upload-card" bindtap="chooseAlbum">
+    <view class="upload-plus">+</view>
+    <text class="upload-title">点击上传图片</text>
+    <text class="upload-sub">支持 JPG、PNG 格式</text>
+  </view>
+
+  <!-- 未完成的草稿：上次编辑到一半退出时出现，可一键接着改，避免进度白做 -->
+  <view wx:if="{{draft}}" class="draft-card">
+    <view class="draft-main" bindtap="resumeDraft">
+      <view class="draft-icon">✎</view>
+      <view class="draft-text">
+        <text class="draft-title">继续上次编辑（{{draft.w}}×{{draft.h}}）</text>
+        <text class="draft-sub">{{draft.when}}改动 · 尚未保存到历史</text>
+      </view>
+      <text class="draft-cta">继续 ›</text>
+    </view>
+    <text class="draft-discard" catchtap="discardDraft">放弃</text>
+  </view>
+
+  <!-- 新手教程 banner -->
+  <view class="guide-banner" bindtap="goGuide">
+    <view class="banner-icon">教</view>
+    <view class="banner-text">
+      <text class="banner-title">新手必看</text>
+      <text class="banner-sub">5 分钟做出第一张拼豆图纸</text>
+    </view>
+    <text class="banner-cta">看教程 ›</text>
+  </view>
+
+  <!-- 更多功能 2x2 网格 -->
+  <view class="section-title">更多功能</view>
+  <view class="grid-2x2">
+    <view class="grid-cell" bindtap="goColorpicker">
+      <view class="grid-icon icon-yellow">Aa</view>
+      <text class="grid-title">色号识别</text>
+      <text class="grid-sub">上传图片找豆子色号</text>
+    </view>
+    <view class="grid-cell" bindtap="goGuide">
+      <view class="grid-icon icon-blue">?</view>
+      <text class="grid-title">新手教程</text>
+      <text class="grid-sub">5 分钟看懂怎么用</text>
+    </view>
+    <view class="grid-cell" bindtap="goHistory">
+      <view class="grid-icon icon-green">↻</view>
+      <text class="grid-title">最近作品</text>
+      <text class="grid-sub">查看/继续编辑历史图纸</text>
+    </view>
+    <view class="grid-cell" bindtap="chooseCamera">
+      <view class="grid-icon icon-purple">⊙</view>
+      <text class="grid-title">拍照上传</text>
+      <text class="grid-sub">拍一张实时图来转换</text>
+    </view>
+  </view>
+
+  <view style="height:40rpx"></view>
+</view>

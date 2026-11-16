@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>拼豆图纸 · 多品牌色号对比</title>
+<style>
+  body { margin:0; padding:24px; background:#f5f6f8; color:#222;
+         font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+  h1 { font-size:19px; font-weight:600; margin:0 0 6px; }
+  .sub { font-size:13px; color:#666; margin:0 0 20px; line-height:1.75; max-width:1100px; }
+  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; max-width:1500px; }
+  .panel { background:#fff; border-radius:12px; padding:14px 16px 18px;
+           border:0.5px solid rgba(0,0,0,.12); }
+  .tag { display:inline-block; font-size:12px; padding:2px 9px; border-radius:99px;
+         background:#E1F5EE; color:#0F6E56; margin-bottom:8px; }
+  .panel h2 { font-size:14px; font-weight:600; margin:0 0 2px; }
+  .panel p { font-size:12.5px; color:#777; margin:0 0 6px; line-height:1.6; }
+  .stat { font-size:12px; color:#0F6E56; margin:0 0 10px; }
+  canvas { width:100%; height:auto; display:block; image-rendering:pixelated; }
+  .note { max-width:1500px; margin-top:20px; font-size:12.5px; color:#666; line-height:1.85;
+          background:#fff; border-radius:12px; padding:14px 18px;
+          border:0.5px solid rgba(0,0,0,.12); }
+  code { background:#f1efe8; padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<h1>拼豆图纸 · 同一张图在不同品牌下的色号</h1>
+<p class="sub">
+  三张图画的是<b>同一份图案</b>（20×20），区别只在「色号系统」。<br>
+  换品牌只做一件事：把每种颜色重新对应到目标品牌里最接近的那颗豆子，图案本身不动。<br>
+  数据来自 <code>data/brands.js</code> 真实色卡，页面里的绘制逻辑直接引用 <code>utils/render.js</code> 源码。
+</p>
+
+<div class="grid" id="grid"></div>
+
+<div class="note">
+  <b>看什么：</b>底色与色块位置三张完全一致；变的是每格里的标注和用豆量清单。<br>
+  <b>Perler 那栏注意：</b>它的官方色号是 <code>80-15179</code> 这种长 SKU，直接印进格子会溢出，
+  所以格内用了短码，完整色号仍保留在图纸数据与采购清单里。<br>
+  <b>一个已知的取舍：</b>色值来自社区按实物拍照整理，与实物存在色差，关键颜色建议拿手上的豆子核对一次。
+</div>
+
+<script>
+const module = { exports: {} };
+// utils/render.js
+// 统一的拼豆图纸绘制：在任意 2D ctx 上把 grid 画成「真实拼豆摆放」效果。
+// - pixel 模式：带 1-2px 间隙的色块 + 深色描边（模拟豆子间的缝隙）
+// - bead  模式：圆/方凸起，外圈加深，中间高光（最像实物）
+// - symbol 模式：用字母/符号代替颜色（方便黑白打印）
+// 每个像素格固定为正方形（调用方保证 cell 为整数且 x/y 同值）。
+
+function drawBeadCell(ctx, cx, cy, r, col) {
+  // 外圈描边（豆子侧壁阴影）：旧版 ×0.55 太暗，会把颜色压灰；改为 ×0.8，
+  // 既保留豆子的立体感/颗粒感，又让颜色更接近色板原色。
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = `rgb(${(col[0] * 0.8) | 0},${(col[1] * 0.8) | 0},${(col[2] * 0.8) | 0})`;
+  ctx.fill();
+  // 主体（色板原色，不动）
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 2);
+  ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+  ctx.fill();
+  // 高光（左上角反光）：减弱不透明度，避免白高光冲淡颜色
+  ctx.beginPath();
+  ctx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fill();
+}
+
+// 在 ctx 上绘制整张图纸网格
+// opts: { grid, w, h, cell, offX, offY, colorMeta, mode, symbolMap,
+//         showSymbol, showCode, labelMinCell }
+//   grid: Int32Array/Array，值 < 0 表示「形状外/不拼」
+//   colorMeta: { [id]: { rgb:[r,g,b], hex, code, name } }
+//   mode: 'pixel' | 'bead' | 'symbol'
+//   symbolMap: { [id]: 'A' }（仅 symbol 模式需要）
+//   showCode: pixel 模式下在格子中央印「品牌色号」文本（如 C07）——图纸效果的核心
+//   showSymbol: 同上，但印字母符号（旧版打印图行为，保留兼容）
+//             两者都为真时 showCode 优先
+//   labelMinCell: 格子小于该像素数就不印标签（默认 色号 10 / 符号 14）。
+//              格子太小时文字会糊成一坨，反而更难读，所以宁可省略。
+function drawGrid(ctx, opts) {
+  const { grid, w, h, cell, offX, offY, colorMeta, mode, symbolMap, showSymbol, showCode } = opts;
+
+  if (mode === 'symbol') {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(offX, offY, cell * w, cell * h);
+    ctx.fillStyle = '#000';
+    ctx.font = `${Math.max(8, Math.round(cell * 0.6))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const id = grid[y * w + x];
+        if (id < 0) continue;
+        const s = symbolMap ? (symbolMap[id] || '') : '';
+        ctx.fillText(s, offX + x * cell + cell / 2, offY + y * cell + cell / 2);
+      }
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    return;
+  }
+
+  // 像素间距：固定 1px 缝隙（cell>=4 时），保留豆子颗粒感。
+  // 注意：缝隙透出的是「白色」画布背景（editor/preview 已改为白底），不再透灰，颜色更干净。
+  // cell<4 时仍填满整格，避免小屏预览时色块被压缩到看不见。
+  const gap = cell < 4 ? 0 : 1;
+
+  // 格内标签：色号（C07）优先，其次字母符号（A/B/C，兼容旧打印图）。
+  // 格子小于阈值时一律不印——文字会糊成一坨，反而更难读。
+  // 优先用 short（短码）：Perler 这类品牌的官方色号是 80-15179 的长 SKU，
+  // 直接印进格子会溢出；short 已在生成数据时保证品牌内唯一且 ≤5 字符。
+  const labelOf = showCode
+    ? (id) => (colorMeta[id] && (colorMeta[id].short || colorMeta[id].code)) || ''
+    : (showSymbol && symbolMap ? (id) => symbolMap[id] || '' : null);
+  const useLabel = !!labelOf && cell >= (opts.labelMinCell || (showCode ? 10 : 14));
+  let lastFont = 0;   // 只有 font 能安全缓存：画底色不会改 font，但会改 fillStyle
+  if (useLabel) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; }
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const id = grid[y * w + x];
+      const x0 = offX + x * cell;
+      const y0 = offY + y * cell;
+      if (id < 0) {
+        // 形状外：浅灰底，提示「此处不拼」
+        ctx.fillStyle = 'rgb(230,230,230)';
+        ctx.fillRect(x0, y0, cell, cell);
+        continue;
+      }
+      const col = colorMeta[id].rgb;
+      if (mode === 'bead') {
+        drawBeadCell(ctx, x0 + cell / 2, y0 + cell / 2, cell * 0.48, col);
+      } else {
+        // pixel：实心填满色板原色 + 极浅中性细边。
+        // 旧版用 rgb-45 深色描边，会把鲜艳颜色压暗；改为 rgba(0,0,0,0.10) 浅灰细边，
+        // 白/浅色块仍有边界可见，彩色块则几乎看不出描边，颜色更贴近原图。
+        const ix = x0 + gap, iy = y0 + gap, isz = cell - gap * 2;
+        ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+        ctx.fillRect(ix, iy, isz, isz);
+        ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ix + 0.5, iy + 0.5, isz - 1, isz - 1);
+        // 格内标签（色号/符号）：默认不画，只有调用方显式开启才生效，
+        // 因此编辑器与屏幕预览的观感不受影响。
+        if (useLabel) {
+          const text = labelOf(id);
+          if (text) {
+            const lum = 0.299 * col[0] + 0.587 * col[1] + 0.114 * col[2];
+            // 字号：不超过格子的一半，且整串宽度 ≤ 格子 92%
+            // （sans-serif 数字/大写字母平均字宽约 0.6×字号，即可用宽度 ≈ 字号×1.53）
+            const fs = Math.max(5, Math.floor(Math.min(cell * 0.5, cell * 1.53 / text.length)));
+            if (fs !== lastFont) { ctx.font = `${fs}px sans-serif`; lastFont = fs; }
+            // 浅底黑字 / 深底白字，任何底色上都看得清
+            const fill = lum > 150 ? 'rgba(0,0,0,0.82)' : 'rgba(255,255,255,0.92)';
+            // 必须每格直接赋值：上面画底色时已经改过 ctx.fillStyle，
+            // 用 lastFill 做缓存会与真实画笔状态脱节 —— 连续同明暗的格子
+            // 会用底色去写文字，整片色号"消失"（2026-09-19 审查 F02：
+            // MARD 385/400 格、Hama 393/400 格的文字颜色都是错的）。
+            ctx.fillStyle = fill;
+            ctx.fillText(text, x0 + cell / 2, y0 + cell / 2 + 0.5);
+          }
+        }
+      }
+    }
+  }
+  if (useLabel) { ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; }
+}
+
+// 绘制坐标网格线，用于施工/打印图。
+// 不传 emphasis 时保持原行为（每 10 格主线、其余细线），供屏幕预览使用；
+// 传 emphasis:true 时增加「每 5 格」中间档并加深主线——导出/打印的图纸上数格子更快。
+function drawCoordLines(ctx, opts) {
+  const { w, h, cell, offX, offY, emphasis } = opts;
+  const line = (x1, y1, x2, y2) => {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  };
+  const style = (i) => {
+    if (i % 10 === 0) {
+      ctx.strokeStyle = emphasis ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = emphasis ? 1.5 : 1;
+    } else if (emphasis && i % 5 === 0) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+      ctx.lineWidth = 1;
+    } else {
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      ctx.lineWidth = 1;
+    }
+  };
+  for (let x = 0; x <= w; x++) { style(x); line(offX + x * cell, offY, offX + x * cell, offY + h * cell); }
+  for (let y = 0; y <= h; y++) { style(y); line(offX, offY + y * cell, offX + w * cell, offY + y * cell); }
+}
+
+// 绘制自动图例：色块 + 色号 + 名称 + 粒数
+// opts: { ctx, panel, startX, startY, rowH, title, cols, colWidth, countX }
+//   panel: [{ hex, code, name, count, sym? }]，带 sym（字母）时在图例里一并显示，
+//          与打印图格子上叠加的符号对应，方便按符号找色
+//   cols/colWidth: 多列排布（默认 1 列保持旧版观感），按「先左右、再换行」填充；
+//                  多列时请同时把 countX 调小（默认 320 会串到下一列）
+//   返回图例底部的 y 坐标，便于调用方计算画布高度
+function drawLegend(ctx, opts) {
+  const { panel, startX, startY, rowH, title } = opts;
+  const cols = Math.max(1, opts.cols || 1);
+  const colWidth = opts.colWidth || 0;
+  const countX = opts.countX || 320;
+  let ly = startY;
+  if (title) {
+    ctx.fillStyle = '#333';
+    ctx.font = '600 18px sans-serif';
+    ctx.fillText(title, startX, ly);
+    ly += 26;
+  }
+  const top = ly;
+  ctx.font = '15px sans-serif';
+  panel.forEach((c, i) => {
+    const col = cols > 1 ? i % cols : 0;
+    const row = cols > 1 ? Math.floor(i / cols) : i;
+    const x = startX + col * colWidth;
+    const y = top + row * rowH;
+    ctx.fillStyle = c.hex;
+    ctx.fillRect(x, y, 24, 24);
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, 24, 24);
+    ctx.fillStyle = '#222';
+    ctx.fillText(`${c.sym ? c.sym + '  ' : ''}${c.code} ${c.name}`, x + 36, y + 18);
+    // 用量 / 建议购买 一起印：标题承诺"含备用"，就必须给出建议购买量，
+    // 只印实际用量等于让用户照实数买，缺口没有兜底（审查 F11）。
+    const buy = (c.suggest && c.suggest > c.count) ? (c.count + '/' + c.suggest) : String(c.count);
+    ctx.fillText(buy, x + countX, y + 18);
+  });
+  const rows = Math.max(1, Math.ceil(panel.length / cols));
+  return top + rows * rowH;
+}
+
+module.exports = { drawGrid, drawBeadCell, drawCoordLines, drawLegend };
+
+const render = module.exports;
+
+const W = 20, H = 20, CELL = 26;
+const VARIANTS = [{"label":"MARD","desc":"默认色号系统 · 国内最常用","grid":[3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,7,7,7,7,7,7,3,3,3,3,3,5,5,5,3,3,3,4,4,4,7,7,7,7,7,7,4,4,4,4,5,5,5,5,5,4,4,4,4,4,7,7,7,7,7,7,4,4,4,4,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,5,5,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,5,5,5,4,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,6,6,6,6,6,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,6,6,6,6,6,2,2,2,2,2,2,2,2,2,2,8,8,8,8,2,6,6,6,6,6,2,2,1,1,1,1,1,1,1,1,8,8,8,8,1,6,6,6,6,6,1,1,1,1,1,1,9,9,9,9,8,8,8,8,1,1,1,1,1,1,1,1,1,1,1,1,9,9,9,9,8,8,8,8,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],"meta":{"0":{"rgb":[169,203,241],"code":"P13","brandKey":"mard","name":"P13","hex":"#A9CBF1","short":"P13"},"1":{"rgb":[78,132,109],"code":"B25","brandKey":"mard","name":"B25","hex":"#4E846D","short":"B25"},"2":{"rgb":[155,171,90],"code":"B32","brandKey":"mard","name":"B32","hex":"#9BAB5A","short":"B32"},"3":{"rgb":[27,96,195],"code":"R8","brandKey":"mard","name":"R8","hex":"#1B60C3","short":"R8"},"4":{"rgb":[80,169,240],"code":"C6","brandKey":"mard","name":"C6","hex":"#50A9F0","short":"C6"},"5":{"rgb":[255,219,77],"code":"R10","brandKey":"mard","name":"R10","hex":"#FFDB4D","short":"R10"},"6":{"rgb":[201,103,93],"code":"R25","brandKey":"mard","name":"R25","hex":"#C9675D","short":"R25"},"7":{"rgb":[252,248,249],"code":"P1","brandKey":"mard","name":"P1","hex":"#FCF8F9","short":"P1"},"8":{"rgb":[21,111,64],"code":"B12","brandKey":"mard","name":"B12","hex":"#156F40","short":"B12"},"9":{"rgb":[108,55,47],"code":"R22","brandKey":"mard","name":"R22","hex":"#6C372F","short":"R22"}},"panel":[{"id":0,"rgb":[169,203,241],"hex":"#A9CBF1","code":"P13","short":"P13","name":"P13","count":80},{"id":1,"rgb":[78,132,109],"hex":"#4E846D","code":"B25","short":"B25","name":"B25","count":75},{"id":2,"rgb":[155,171,90],"hex":"#9BAB5A","code":"B32","short":"B32","name":"B32","count":61},{"id":3,"rgb":[27,96,195],"hex":"#1B60C3","code":"R8","short":"R8","name":"R8","count":51},{"id":4,"rgb":[80,169,240],"hex":"#50A9F0","code":"C6","short":"C6","name":"C6","count":50},{"id":5,"rgb":[255,219,77],"hex":"#FFDB4D","code":"R10","short":"R10","name":"R10","count":21},{"id":6,"rgb":[201,103,93],"hex":"#C9675D","code":"R25","short":"R25","name":"R25","count":20},{"id":7,"rgb":[252,248,249],"hex":"#FCF8F9","code":"P1","short":"P1","name":"P1","count":18},{"id":8,"rgb":[21,111,64],"hex":"#156F40","code":"B12","short":"B12","name":"B12","count":16},{"id":9,"rgb":[108,55,47],"hex":"#6C372F","code":"R22","short":"R22","name":"R22","count":8}],"total":400},{"label":"Hama","desc":"丹麦品牌 · 5mm 大豆","grid":[38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,38,63,63,63,63,63,63,38,38,38,38,38,75,75,75,38,38,38,71,71,71,63,63,63,63,63,63,71,71,71,71,75,75,75,75,75,71,71,71,71,71,63,63,63,63,63,63,71,71,71,71,75,75,75,75,75,71,71,71,71,71,71,71,71,71,71,71,71,71,71,71,75,75,75,75,75,71,71,71,71,71,71,71,71,71,71,71,71,71,71,71,71,75,75,75,71,71,71,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,65,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,41,41,41,41,41,82,82,82,82,82,82,82,82,82,82,82,82,82,82,82,41,41,41,41,41,82,82,82,82,82,82,82,82,82,82,9,9,9,9,82,41,41,41,41,41,82,82,85,85,85,85,85,85,85,85,9,9,9,9,85,41,41,41,41,41,85,85,85,85,85,85,90,90,90,90,9,9,9,9,85,85,85,85,85,85,85,85,85,85,85,85,90,90,90,90,9,9,9,9,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85,85],"meta":{"9":{"rgb":[2,118,67],"code":"H10","brandKey":"hama","name":"Green","hex":"#027643","short":"H10"},"38":{"rgb":[38,89,178],"code":"H41","brandKey":"hama","name":"Fluorescent Blue","hex":"#2659B2","short":"H41"},"41":{"rgb":[249,97,96],"code":"H44","brandKey":"hama","name":"Pastel Red","hex":"#F96160","short":"H44"},"63":{"rgb":[250,248,237],"code":"H55","brandKey":"hama","name":"Green (Glow in the Dark)","hex":"#FAF8ED","short":"H55"},"65":{"rgb":[196,208,227],"code":"H57","brandKey":"hama","name":"Blue (Glow in the Dark)","hex":"#C4D0E3","short":"H57"},"71":{"rgb":[89,174,245],"code":"H73","brandKey":"hama","name":"Translucent Aqua","hex":"#59AEF5","short":"H73"},"75":{"rgb":[255,230,96],"code":"H103","brandKey":"hama","name":"Light Yellow","hex":"#FFE660","short":"H103"},"82":{"rgb":[131,137,86],"code":"H110","brandKey":"hama","name":"Matcha","hex":"#838956","short":"H110"},"85":{"rgb":[95,136,123],"code":"H113","brandKey":"hama","name":"Aqua","hex":"#5F887B","short":"H113"},"90":{"rgb":[97,41,50],"code":"H118","brandKey":"hama","name":"Maroon Red","hex":"#612932","short":"H118"}},"panel":[{"id":65,"rgb":[196,208,227],"hex":"#C4D0E3","code":"H57","short":"H57","name":"Blue (Glow in the Dark)","count":80},{"id":85,"rgb":[95,136,123],"hex":"#5F887B","code":"H113","short":"H113","name":"Aqua","count":75},{"id":82,"rgb":[131,137,86],"hex":"#838956","code":"H110","short":"H110","name":"Matcha","count":61},{"id":38,"rgb":[38,89,178],"hex":"#2659B2","code":"H41","short":"H41","name":"Fluorescent Blue","count":51},{"id":71,"rgb":[89,174,245],"hex":"#59AEF5","code":"H73","short":"H73","name":"Translucent Aqua","count":50},{"id":75,"rgb":[255,230,96],"hex":"#FFE660","code":"H103","short":"H103","name":"Light Yellow","count":21},{"id":41,"rgb":[249,97,96],"hex":"#F96160","code":"H44","short":"H44","name":"Pastel Red","count":20},{"id":63,"rgb":[250,248,237],"hex":"#FAF8ED","code":"H55","short":"H55","name":"Green (Glow in the Dark)","count":18},{"id":9,"rgb":[2,118,67],"hex":"#027643","code":"H10","short":"H10","name":"Green","count":16},{"id":90,"rgb":[97,41,50],"hex":"#612932","code":"H118","short":"H118","name":"Maroon Red","count":8}],"total":400},{"label":"Perler","desc":"美国品牌 · 色号是长 SKU，格内自动用短码","grid":[4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,25,25,25,25,25,25,4,4,4,4,4,27,27,27,4,4,4,44,44,44,25,25,25,25,25,25,44,44,44,44,27,27,27,27,27,44,44,44,44,44,25,25,25,25,25,25,44,44,44,44,27,27,27,27,27,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,27,27,27,27,27,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,27,27,27,44,44,44,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,71,71,71,71,71,52,52,52,52,52,52,52,52,52,52,52,52,52,52,52,71,71,71,71,71,52,52,52,52,52,52,52,52,52,52,34,34,34,34,52,71,71,71,71,71,52,52,57,57,57,57,57,57,57,57,34,34,34,34,57,71,71,71,71,71,57,57,57,57,57,57,64,64,64,64,34,34,34,34,57,57,57,57,57,57,57,57,57,57,57,57,64,64,64,64,34,34,34,34,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57,57],"meta":{"4":{"rgb":[0,101,177],"code":"80-15200","brandKey":"perler","name":"Cobalt","hex":"#0065B1","short":"5200"},"6":{"rgb":[169,205,213],"code":"80-15202","brandKey":"perler","name":"Robin's Egg","hex":"#A9CDD5","short":"5202"},"25":{"rgb":[234,239,238],"code":"80-19001","brandKey":"perler","name":"White","hex":"#EAEFEE","short":"9001"},"27":{"rgb":[231,206,62],"code":"80-19003","brandKey":"perler","name":"Yellow","hex":"#E7CE3E","short":"9003"},"34":{"rgb":[0,123,78],"code":"80-19010","brandKey":"perler","name":"Dark Green","hex":"#007B4E","short":"9010"},"44":{"rgb":[74,156,207],"code":"80-19052","brandKey":"perler","name":"Pastel Blue","hex":"#4A9CCF","short":"9052"},"52":{"rgb":[105,184,69],"code":"80-19061","brandKey":"perler","name":"Kiwi Lime","hex":"#69B845","short":"9061"},"57":{"rgb":[77,171,100],"code":"80-19080","brandKey":"perler","name":"Green","hex":"#4DAB64","short":"9080"},"64":{"rgb":[132,57,71],"code":"80-19096","brandKey":"perler","name":"Cranapple","hex":"#843947","short":"9096"},"71":{"rgb":[210,93,114],"code":"80-15244","brandKey":"perler","name":"Rose","hex":"#D25D72","short":"5244"}},"panel":[{"id":6,"rgb":[169,205,213],"hex":"#A9CDD5","code":"80-15202","short":"5202","name":"Robin's Egg","count":80},{"id":57,"rgb":[77,171,100],"hex":"#4DAB64","code":"80-19080","short":"9080","name":"Green","count":75},{"id":52,"rgb":[105,184,69],"hex":"#69B845","code":"80-19061","short":"9061","name":"Kiwi Lime","count":61},{"id":4,"rgb":[0,101,177],"hex":"#0065B1","code":"80-15200","short":"5200","name":"Cobalt","count":51},{"id":44,"rgb":[74,156,207],"hex":"#4A9CCF","code":"80-19052","short":"9052","name":"Pastel Blue","count":50},{"id":27,"rgb":[231,206,62],"hex":"#E7CE3E","code":"80-19003","short":"9003","name":"Yellow","count":21},{"id":71,"rgb":[210,93,114],"hex":"#D25D72","code":"80-15244","short":"5244","name":"Rose","count":20},{"id":25,"rgb":[234,239,238],"hex":"#EAEFEE","code":"80-19001","short":"9001","name":"White","count":18},{"id":34,"rgb":[0,123,78],"hex":"#007B4E","code":"80-19010","short":"9010","name":"Dark Green","count":16},{"id":64,"rgb":[132,57,71],"hex":"#843947","code":"80-19096","short":"9096","name":"Cranapple","count":8}],"total":400}];
+
+const holder = document.getElementById('grid');
+
+VARIANTS.forEach(function (v, vi) {
+  const panel = document.createElement('div');
+  panel.className = 'panel';
+  panel.innerHTML =
+    '<span class="tag">' + v.label + '</span>' +
+    '<h2>' + v.label + ' · ' + v.panel.length + ' 色 · ' + v.total + ' 粒</h2>' +
+    '<p>' + v.desc + '</p>' +
+    '<div class="stat">' + v.panel.slice(0, 6).map(function (c) { return c.code + '×' + c.count; }).join('　') + '</div>' +
+    '<canvas id="cv' + vi + '"></canvas>';
+
+  holder.appendChild(panel);
+});
+
+VARIANTS.forEach(function (v, vi) {
+  const node = document.getElementById('cv' + vi);
+  const margin = 30, titleH = 62, coord = 30;
+  const gridW = CELL * W, gridH = CELL * H;
+  const cols = v.panel.length > 6 ? 3 : (v.panel.length > 3 ? 2 : 1);
+  const colW = 210, rowH = 30;
+  const rows = Math.max(1, Math.ceil(v.panel.length / cols));
+  const cw = Math.max(gridW + coord + margin * 2, cols * colW + margin * 2);
+  const ch = margin + titleH + coord + gridH + 40 + (24 + rows * rowH) + margin;
+  node.width = cw; node.height = ch;
+
+  const ctx = node.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch);
+  ctx.strokeStyle = '#e6e6e6'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, cw - 2, ch - 2);
+
+  ctx.fillStyle = '#222'; ctx.font = '600 24px sans-serif';
+  ctx.fillText('拼豆图纸 ' + W + '×' + H, margin, margin + 26);
+  ctx.fillStyle = '#777'; ctx.font = '15px sans-serif';
+  ctx.fillText(v.total + ' 粒 · ' + v.panel.length + ' 色 · ' + v.label + ' 色号', margin, margin + 50);
+
+  const gx = Math.round((cw - gridW) / 2), gy = margin + titleH + coord;
+
+  ctx.fillStyle = '#444'; ctx.font = '13px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let x = 0; x < W; x++) if ((x + 1) % 5 === 0) ctx.fillText(String(x + 1), gx + x * CELL + CELL / 2, gy - 14);
+  for (let y = 0; y < H; y++) if ((y + 1) % 5 === 0) ctx.fillText(String(y + 1), gx - 14, gy + y * CELL + CELL / 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+
+  render.drawGrid(ctx, {
+    grid: v.grid, w: W, h: H, cell: CELL, offX: gx, offY: gy,
+    colorMeta: v.meta, mode: 'pixel', showCode: true, labelMinCell: 10
+  });
+  render.drawCoordLines(ctx, { w: W, h: H, cell: CELL, offX: gx, offY: gy, emphasis: true });
+
+  render.drawLegend(ctx, {
+    panel: v.panel, startX: margin, startY: gy + gridH + 40, rowH: rowH,
+    title: '色卡 / 用量', cols: cols, colWidth: colW, countX: 168
+  });
+});
+</script>
+</body>
+</html>

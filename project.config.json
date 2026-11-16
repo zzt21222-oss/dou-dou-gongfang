@@ -1,0 +1,135 @@
+{
+  "description": "拼豆图纸转化小程序 - 项目配置",
+  "packOptions": {
+    "ignore": [
+      {
+        "value": "outputs",
+        "type": "folder"
+      },
+      {
+        "value": "inputs",
+        "type": "folder"
+      },
+      {
+        "value": ".workbuddy",
+        "type": "folder"
+      },
+      {
+        "value": ".git",
+        "type": "folder"
+      },
+      {
+        "value": "debug_labels.js",
+        "type": "file"
+      },
+      {
+        "value": "diag_mp.js",
+        "type": "file"
+      },
+      {
+        "value": "mock_render.js",
+        "type": "file"
+      },
+      {
+        "value": "sim_50x50.js",
+        "type": "file"
+      },
+      {
+        "value": "test_shape_mask.js",
+        "type": "file"
+      },
+      {
+        "value": "verify.js",
+        "type": "file"
+      },
+      {
+        "value": "verify_qr.js",
+        "type": "file"
+      },
+      {
+        "value": "verify_regionmode.js",
+        "type": "file"
+      },
+      {
+        "value": "verify_render.js",
+        "type": "file"
+      },
+      {
+        "value": "verify_sampling.js",
+        "type": "file"
+      },
+      {
+        "value": ".py",
+        "type": "suffix"
+      },
+      {
+        "value": ".md",
+        "type": "suffix"
+      },
+      {
+        "value": ".txt",
+        "type": "suffix"
+      },
+      {
+        "value": ".log",
+        "type": "suffix"
+      },
+      {
+        "value": "legacy",
+        "type": "folder"
+      },
+      {
+        "value": "verification",
+        "type": "folder"
+      },
+      {
+        "value": "node_modules",
+        "type": "folder"
+      },
+      {
+        "value": "tools",
+        "type": "folder"
+      },
+      {
+        "value": "docs",
+        "type": "folder"
+      }
+    ],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "bigPackageSizeSupport": true,
+    "compileWorklet": false,
+    "uglifyFileName": false,
+    "uploadWithSourceMap": true,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "minifyWXML": true,
+    "localPlugins": false,
+    "disableUseStrict": false,
+    "useCompilerPlugins": false,
+    "condition": false,
+    "swc": false,
+    "disableSWC": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "compileType": "miniprogram",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "libVersion": "3.17.0",
+  "appid": "YOUR_APPID_HERE",
+  "projectname": "perler-bead-pattern",
+  "condition": {},
+  "simulatorPluginLibVersion": {},
+  "editorSetting": {}
+}

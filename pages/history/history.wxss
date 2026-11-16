@@ -1,0 +1,107 @@
+.guide-btn {
+  padding: 10rpx 24rpx;
+  background: #fff0e8;
+  color: #ff7a45;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+}
+.iname { font-size: 30rpx; font-weight: 600; }
+.mini {
+  height: 60rpx;
+  padding: 0 36rpx;
+  font-size: 26rpx;
+  margin-right: 16rpx;
+  border-radius: 12rpx;
+}
+
+/* 本机备份行：只在「从云端恢复」后出现，提供一次反悔机会 */
+.bak-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 2rpx solid #f0f0f0;
+}
+.bak-btn {
+  color: #ff7a45;
+  font-size: 24rpx;
+  font-weight: 600;
+  padding: 8rpx 24rpx;
+  background: #fff0e8;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+
+/* === 作品墙（双列卡片）=== */
+.wall {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+.wall-item {
+  width: 48.5%;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 16rpx;
+  margin-bottom: 20rpx;
+  box-sizing: border-box;
+}
+.thumb-wrap {
+  width: 100%;
+  height: 280rpx;
+  background: #f5f6f8;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.thumb { width: 100%; height: 100%; }
+.thumb-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #999;
+}
+.meta {
+  margin-top: 12rpx;
+  display: flex;
+  flex-direction: column;
+}
+.small { font-size: 22rpx; margin-top: 4rpx; }
+.tip {
+  text-align: center;
+  font-size: 22rpx;
+  margin-top: 8rpx;
+}
+
+/* === 空状态 === */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60rpx 24rpx;
+}
+.empty-grid {
+  display: flex;
+  flex-wrap: wrap;
+  width: 126rpx;
+  margin-bottom: 24rpx;
+}
+.eg-cell {
+  width: 38rpx;
+  height: 38rpx;
+  border-radius: 6rpx;
+  background: #ffd9c9;
+  margin: 2rpx;
+}
+.eg-cell:nth-child(2n) { background: #ffb08f; }
+.eg-cell:nth-child(3n) { background: #ff7a45; }
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 8rpx;
+}
+.empty-btn {
+  margin-top: 28rpx;
+  width: 300rpx;
+}

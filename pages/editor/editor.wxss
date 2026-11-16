@@ -1,0 +1,230 @@
+.canvas-wrap {
+  width: 100%;
+  background: #f0f1f3;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.bead-canvas {
+  display: block;   /* 尺寸由 cvW/cvH 动态绑定，随网格比例自适应 */
+}
+.board-info {
+  margin-top: 12rpx;
+}
+.set-row {
+  padding: 14rpx 0;
+}
+.hint {
+  font-size: 22rpx;
+  color: #999;
+  line-height: 1.4;
+  margin: 6rpx 0 6rpx;
+}
+.num-input {
+  width: 120rpx;
+  text-align: center;
+  background: #f0f1f3;
+  border-radius: 10rpx;
+  padding: 8rpx 0;
+}
+.input-wrap {
+  display: flex;
+  align-items: center;
+}
+.unit {
+  margin-left: 12rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+.slider-row {
+  display: flex;
+  align-items: center;
+  margin: 12rpx 0;
+}
+.slider-label {
+  width: 120rpx;
+  font-size: 26rpx;
+  color: #555;
+}
+.slider { flex: 1; }
+.picker {
+  padding: 10rpx 24rpx;
+  background: #f0f1f3;
+  border-radius: 10rpx;
+  font-size: 26rpx;
+}
+.tool {
+  padding: 14rpx 28rpx;
+  background: #f0f1f3;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  margin: 0 12rpx 12rpx 0;
+  color: #555;
+}
+.tool.active {
+  background: #ff7a45;
+  color: #fff;
+}
+/* 撤销/重做：与普通工具区分（描边样式），无历史时灰显 */
+.tool-history {
+  border: 2rpx solid #ff7a45;
+  color: #ff7a45;
+  background: #fff;
+}
+.tool-disabled {
+  opacity: 0.35;
+}
+.swatch {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #ccc;
+  margin: 0 10rpx;
+}
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+}
+.pcell {
+  display: flex;
+  align-items: center;
+  width: 33.33%;
+  padding: 12rpx 0;
+}
+.pinfo {
+  display: flex;
+  flex-direction: column;
+  margin-left: 8rpx;
+}
+.pcode { font-size: 24rpx; font-weight: 600; }
+.pcount { font-size: 20rpx; color: #999; }
+.lock {
+  margin-left: auto;
+  margin-right: 12rpx;
+  font-size: 22rpx;
+  color: #bbb;
+  border: 1rpx solid #ddd;
+  border-radius: 8rpx;
+  padding: 4rpx 10rpx;
+  min-width: 76rpx;          /* 「锁 / 已锁」两种文案宽度一致，切换时不抖动 */
+  text-align: center;
+}
+.lock.on { color: #ff7a45; border-color: #ff7a45; }
+.chip {
+  padding: 12rpx 24rpx;
+  background: #f0f1f3;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #555;
+  margin: 0 12rpx 12rpx 0;
+}
+.chip-accent {
+  background: #fff0e8;
+  color: #ff7a45;
+  border: 1rpx solid #ffd2bc;
+}
+.fab {
+  position: fixed;
+  right: 32rpx;
+  bottom: 180rpx;
+  z-index: 90;
+  height: 88rpx;
+  line-height: 88rpx;
+  padding: 0 40rpx;
+  background: #ff7a45;
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+  border-radius: 44rpx;
+  text-align: center;
+  box-shadow: 0 4rpx 16rpx rgba(255, 122, 69, 0.4);
+}
+.modal-mask {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  width: 560rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  max-height: 70vh;
+  overflow: auto;
+}
+.tpl-list {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 20rpx 0;
+}
+.tpl-item {
+  width: 33.33%;
+  text-align: center;
+  padding: 24rpx 0;
+  font-size: 26rpx;
+  color: #444;
+  border-radius: 12rpx;
+}
+.tpl-item:active { background: #fff0e8; color: #ff7a45; }
+.error-box {
+  margin-top: 12rpx;
+  padding: 16rpx;
+  background: #fff0f0;
+  border: 1rpx solid #ffcccc;
+  border-radius: 12rpx;
+}
+.error-text {
+  font-size: 24rpx;
+  color: #cc0000;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.preview-box {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #f7f7f7;
+  border-radius: 12rpx;
+  text-align: center;
+}
+.preview-label {
+  display: block;
+  font-size: 24rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+.preview-img {
+  width: 200rpx;
+  height: 200rpx;
+  background: #e0e0e0;
+  border-radius: 8rpx;
+}
+.diag-box {
+  margin-top: 12rpx;
+  padding: 16rpx;
+  background: #f6ffed;
+  border: 1rpx solid #b7eb8f;
+  border-radius: 12rpx;
+}
+.diag-text {
+  font-size: 22rpx;
+  color: #389e0d;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: monospace;
+}
+.btn-sm {
+  padding: 6rpx 22rpx;
+  font-size: 24rpx;
+  margin: 0;
+}
+.warn {
+  color: #d4380d;
+}

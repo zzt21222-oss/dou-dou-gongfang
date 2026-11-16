@@ -1,0 +1,62 @@
+<view class="page {{a11yClass}}">
+  <!-- 图片预览 -->
+  <view class="card">
+    <view class="canvas-wrap" id="wrap">
+      <canvas type="2d" id="cv" class="preview-canvas"></canvas>
+      <canvas type="2d" id="ov" class="mask-canvas {{cutMode ? 'show' : ''}}"
+              bindtouchstart="onMaskTouch" bindtouchmove="onMaskTouch"></canvas>
+    </view>
+  </view>
+
+  <!-- 调整 -->
+  <view class="card">
+    <text class="title">简单调整</text>
+    <view class="slider-row">
+      <text class="slider-label">亮度</text>
+      <slider class="slider" min="50" max="150" value="{{brightness}}" bindchanging="onBrightness" bindchange="onBrightness" show-value/>
+    </view>
+    <view class="slider-row">
+      <text class="slider-label">对比度</text>
+      <slider class="slider" min="50" max="150" value="{{contrast}}" bindchanging="onContrast" bindchange="onContrast" show-value/>
+    </view>
+    <view class="slider-row">
+      <text class="slider-label">饱和度</text>
+      <slider class="slider" min="0" max="200" value="{{saturate}}" bindchanging="onSaturate" bindchange="onSaturate" show-value/>
+    </view>
+
+    <view class="divider"></view>
+    <view class="row wrap">
+      <button class="btn btn-ghost mini" bindtap="rotate90">旋转 90°</button>
+      <button class="btn btn-ghost mini" bindtap="toggleMirror">镜像翻转</button>
+      <button class="btn btn-ghost mini" bindtap="cutWhite">去白底</button>
+      <button class="btn btn-ghost mini {{cutMode ? 'btn-accent' : ''}}" bindtap="onCutMode">笔刷抠图</button>
+      <button class="btn btn-ghost mini" bindtap="reset">还原</button>
+    </view>
+
+    <block wx:if="{{cutMode}}">
+      <view class="divider"></view>
+      <text class="muted">笔刷抠图：涂抹要擦除的区域（绿色笔迹=保留）</text>
+      <view class="row wrap" style="margin-top:10rpx">
+        <button class="btn btn-ghost mini {{brushMode==='erase'?'btn-accent':''}}" bindtap="onBrushMode" data-mode="erase">擦除</button>
+        <button class="btn btn-ghost mini {{brushMode==='keep'?'btn-accent':''}}" bindtap="onBrushMode" data-mode="keep">保留</button>
+        <button class="btn btn-ghost mini" bindtap="resetMask">清空笔迹</button>
+      </view>
+      <view class="slider-row">
+        <text class="slider-label">笔刷</text>
+        <slider class="slider" min="6" max="60" value="{{brushSize}}" bindchanging="onBrushSize" bindchange="onBrushSize" show-value/>
+      </view>
+    </block>
+
+    <view class="divider"></view>
+    <text class="muted">裁剪比例</text>
+    <view class="row wrap ratio-row">
+      <view wx:for="{{ratios}}" wx:key="*this"
+            class="ratio-item {{ratio===item ? 'active' : ''}}"
+            bindtap="setRatio" data-ratio="{{item}}">{{item === 'free' ? '自由' : item}}</view>
+    </view>
+  </view>
+
+  <button class="btn btn-primary btn-block" bindtap="goEditor">下一步：设置尺寸与降色</button>
+  <button class="btn btn-ghost btn-block" style="margin-top:16rpx" bindtap="goHome">重新选图</button>
+  <view style="height:40rpx"></view>
+</view>

@@ -1,0 +1,69 @@
+.canvas-wrap {
+  width: 100%;
+  background: #f0f1f3;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin: 12rpx 0;
+}
+.bead-canvas {
+  display: block;   /* 尺寸由 cvW/cvH 动态绑定，随网格比例自适应 */
+}
+.mode {
+  padding: 10rpx 24rpx;
+  background: #f0f1f3;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  margin-left: 12rpx;
+  color: #555;
+}
+.mode.active { background: #ff7a45; color: #fff; }
+.bom-head, .bom-row {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+}
+.bom-head { color: #999; border-bottom: 1rpx solid #eee; }
+.swatch {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 8rpx;
+  border: 1rpx solid #ccc;
+  margin-right: 12rpx;
+}
+.col { flex: 1; }
+.c1 { flex: 0 0 110rpx; }
+.c2 { flex: 1; }
+.c3 { flex: 0 0 90rpx; text-align: center; }
+.c4 { flex: 0 0 150rpx; text-align: center; color: #ff7a45; }
+.modal-mask {
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  width: 600rpx;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  max-height: 72vh;
+  overflow: auto;
+}
+.buy-list { margin: 20rpx 0; }
+.buy-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f3;
+}
+.binfo { display: flex; flex-direction: column; flex: 1; margin-left: 12rpx; }
+.bcode { font-size: 26rpx; font-weight: 600; }
+.bcount { font-size: 22rpx; color: #999; }
+.bgo { font-size: 24rpx; color: #ff7a45; padding: 6rpx 20rpx; border: 1rpx solid #ffd2bc; border-radius: 999rpx; }

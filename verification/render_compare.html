@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>拼豆图纸 · 旧版/新版导出对比</title>
+<style>
+  body { margin:0; padding:24px; background:#f5f6f8; color:#222;
+         font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+  h1 { font-size:19px; font-weight:600; margin:0 0 6px; }
+  .sub { font-size:13px; color:#666; margin:0 0 20px; line-height:1.7; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; max-width:1500px; }
+  .panel { background:#fff; border-radius:12px; padding:14px 16px 18px;
+           border:0.5px solid rgba(0,0,0,.12); }
+  .tag { display:inline-block; font-size:12px; padding:2px 9px; border-radius:99px; margin-bottom:10px; }
+  .old .tag { background:#FCEBEB; color:#A32D2D; }
+  .new .tag { background:#E1F5EE; color:#0F6E56; }
+  .panel h2 { font-size:14px; font-weight:600; margin:0 0 4px; }
+  .panel p { font-size:12.5px; color:#777; margin:0 0 12px; line-height:1.6; }
+  canvas { width:100%; height:auto; display:block; border-radius:6px; image-rendering:pixelated; }
+  .note { max-width:1500px; margin-top:20px; font-size:12.5px; color:#666; line-height:1.8;
+          background:#fff; border-radius:12px; padding:14px 18px;
+          border:0.5px solid rgba(0,0,0,.12); }
+  code { background:#f1efe8; padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<h1>拼豆图纸 · 旧版 / 新版导出对比</h1>
+<p class="sub">
+  同一份 24×24 示例图纸、同一格子大小，只对比<b>渲染方式和版式</b>。<br>
+  页面里的绘制逻辑直接引用项目里的 <code>utils/render.js</code> 源码，不是另画一份——所见即代码实际输出。
+</p>
+
+<div class="grid">
+  <div class="panel old">
+    <span class="tag">旧版</span>
+    <h2>bead 立体模式 · 无格内色号 · 图例单列</h2>
+    <p>外圈 ×0.8 压暗 + 中心 28% 白高光，饱和度被压低；格子里没有色号，拼的时候要来回查图例。</p>
+    <canvas id="oldCv"></canvas>
+  </div>
+  <div class="panel new">
+    <span class="tag">新版</span>
+    <h2>pixel 平面模式 · 格内印色号 · 图例多列</h2>
+    <p>色板原色直出、不压灰；每格直接标色号，深浅底自动切换黑白字；图例多列排布，省掉大片留白。</p>
+    <canvas id="newCv"></canvas>
+  </div>
+</div>
+
+<div class="note">
+  <b>怎么看差别最明显：</b>找左上角的深蓝天（C17）和右边的黄色太阳（C05）——
+  旧版被高光和压暗蒙了一层灰，新版是干净的纯色；再把手机拿远一点看，
+  新版每格能读出 C17/C05，旧版只剩一片模糊色块。<br>
+  <b>尺寸差异另说：</b>新版导出的分辨率也不再写死 16px，而是让图纸长边落在约 1500px（小图格子更大更清楚）。
+  本页为了让两边格子一样大好对比，统一用了相同 cell。</div>
+
+<script>
+const module = { exports: {} };
+// utils/render.js
+// 统一的拼豆图纸绘制：在任意 2D ctx 上把 grid 画成「真实拼豆摆放」效果。
+// - pixel 模式：带 1-2px 间隙的色块 + 深色描边（模拟豆子间的缝隙）
+// - bead  模式：圆/方凸起，外圈加深，中间高光（最像实物）
+// - symbol 模式：用字母/符号代替颜色（方便黑白打印）
+// 每个像素格固定为正方形（调用方保证 cell 为整数且 x/y 同值）。
+
+function drawBeadCell(ctx, cx, cy, r, col) {
+  // 外圈描边（豆子侧壁阴影）：旧版 ×0.55 太暗，会把颜色压灰；改为 ×0.8，
+  // 既保留豆子的立体感/颗粒感，又让颜色更接近色板原色。
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fillStyle = `rgb(${(col[0] * 0.8) | 0},${(col[1] * 0.8) | 0},${(col[2] * 0.8) | 0})`;
+  ctx.fill();
+  // 主体（色板原色，不动）
+  ctx.beginPath();
+  ctx.arc(cx, cy, r * 0.85, 0, Math.PI * 2);
+  ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+  ctx.fill();
+  // 高光（左上角反光）：减弱不透明度，避免白高光冲淡颜色
+  ctx.beginPath();
+  ctx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.28)';
+  ctx.fill();
+}
+
+// 在 ctx 上绘制整张图纸网格
+// opts: { grid, w, h, cell, offX, offY, colorMeta, mode, symbolMap,
+//         showSymbol, showCode, labelMinCell }
+//   grid: Int32Array/Array，值 < 0 表示「形状外/不拼」
+//   colorMeta: { [id]: { rgb:[r,g,b], hex, code, name } }
+//   mode: 'pixel' | 'bead' | 'symbol'
+//   symbolMap: { [id]: 'A' }（仅 symbol 模式需要）
+//   showCode: pixel 模式下在格子中央印「品牌色号」文本（如 C07）——图纸效果的核心
+//   showSymbol: 同上，但印字母符号（旧版打印图行为，保留兼容）
+//             两者都为真时 showCode 优先
+//   labelMinCell: 格子小于该像素数就不印标签（默认 色号 10 / 符号 14）。
+//              格子太小时文字会糊成一坨，反而更难读，所以宁可省略。
+function drawGrid(ctx, opts) {
+  const { grid, w, h, cell, offX, offY, colorMeta, mode, symbolMap, showSymbol, showCode } = opts;
+
+  if (mode === 'symbol') {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(offX, offY, cell * w, cell * h);
+    ctx.fillStyle = '#000';
+    ctx.font = `${Math.max(8, Math.round(cell * 0.6))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const id = grid[y * w + x];
+        if (id < 0) continue;
+        const s = symbolMap ? (symbolMap[id] || '') : '';
+        ctx.fillText(s, offX + x * cell + cell / 2, offY + y * cell + cell / 2);
+      }
+    }
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    return;
+  }
+
+  // 像素间距：固定 1px 缝隙（cell>=4 时），保留豆子颗粒感。
+  // 注意：缝隙透出的是「白色」画布背景（editor/preview 已改为白底），不再透灰，颜色更干净。
+  // cell<4 时仍填满整格，避免小屏预览时色块被压缩到看不见。
+  const gap = cell < 4 ? 0 : 1;
+
+  // 格内标签：色号（C07）优先，其次字母符号（A/B/C，兼容旧打印图）。
+  // 格子小于阈值时一律不印——文字会糊成一坨，反而更难读。
+  // 优先用 short（短码）：Perler 这类品牌的官方色号是 80-15179 的长 SKU，
+  // 直接印进格子会溢出；short 已在生成数据时保证品牌内唯一且 ≤5 字符。
+  const labelOf = showCode
+    ? (id) => (colorMeta[id] && (colorMeta[id].short || colorMeta[id].code)) || ''
+    : (showSymbol && symbolMap ? (id) => symbolMap[id] || '' : null);
+  const useLabel = !!labelOf && cell >= (opts.labelMinCell || (showCode ? 10 : 14));
+  let lastFont = 0, lastFill = '';
+  if (useLabel) { ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; }
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const id = grid[y * w + x];
+      const x0 = offX + x * cell;
+      const y0 = offY + y * cell;
+      if (id < 0) {
+        // 形状外：浅灰底，提示「此处不拼」
+        ctx.fillStyle = 'rgb(230,230,230)';
+        ctx.fillRect(x0, y0, cell, cell);
+        continue;
+      }
+      const col = colorMeta[id].rgb;
+      if (mode === 'bead') {
+        drawBeadCell(ctx, x0 + cell / 2, y0 + cell / 2, cell * 0.48, col);
+      } else {
+        // pixel：实心填满色板原色 + 极浅中性细边。
+        // 旧版用 rgb-45 深色描边，会把鲜艳颜色压暗；改为 rgba(0,0,0,0.10) 浅灰细边，
+        // 白/浅色块仍有边界可见，彩色块则几乎看不出描边，颜色更贴近原图。
+        const ix = x0 + gap, iy = y0 + gap, isz = cell - gap * 2;
+        ctx.fillStyle = `rgb(${col[0]},${col[1]},${col[2]})`;
+        ctx.fillRect(ix, iy, isz, isz);
+        ctx.strokeStyle = 'rgba(0,0,0,0.10)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(ix + 0.5, iy + 0.5, isz - 1, isz - 1);
+        // 格内标签（色号/符号）：默认不画，只有调用方显式开启才生效，
+        // 因此编辑器与屏幕预览的观感不受影响。
+        if (useLabel) {
+          const text = labelOf(id);
+          if (text) {
+            const lum = 0.299 * col[0] + 0.587 * col[1] + 0.114 * col[2];
+            // 字号：不超过格子的一半，且整串宽度 ≤ 格子 92%
+            // （sans-serif 数字/大写字母平均字宽约 0.6×字号，即可用宽度 ≈ 字号×1.53）
+            const fs = Math.max(5, Math.floor(Math.min(cell * 0.5, cell * 1.53 / text.length)));
+            if (fs !== lastFont) { ctx.font = `${fs}px sans-serif`; lastFont = fs; }
+            // 浅底黑字 / 深底白字，任何底色上都看得清
+            const fill = lum > 150 ? 'rgba(0,0,0,0.82)' : 'rgba(255,255,255,0.92)';
+            if (fill !== lastFill) { ctx.fillStyle = fill; lastFill = fill; }
+            ctx.fillText(text, x0 + cell / 2, y0 + cell / 2 + 0.5);
+          }
+        }
+      }
+    }
+  }
+  if (useLabel) { ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic'; }
+}
+
+// 绘制坐标网格线，用于施工/打印图。
+// 不传 emphasis 时保持原行为（每 10 格主线、其余细线），供屏幕预览使用；
+// 传 emphasis:true 时增加「每 5 格」中间档并加深主线——导出/打印的图纸上数格子更快。
+function drawCoordLines(ctx, opts) {
+  const { w, h, cell, offX, offY, emphasis } = opts;
+  const line = (x1, y1, x2, y2) => {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  };
+  const style = (i) => {
+    if (i % 10 === 0) {
+      ctx.strokeStyle = emphasis ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.35)';
+      ctx.lineWidth = emphasis ? 1.5 : 1;
+    } else if (emphasis && i % 5 === 0) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+      ctx.lineWidth = 1;
+    } else {
+      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+      ctx.lineWidth = 1;
+    }
+  };
+  for (let x = 0; x <= w; x++) { style(x); line(offX + x * cell, offY, offX + x * cell, offY + h * cell); }
+  for (let y = 0; y <= h; y++) { style(y); line(offX, offY + y * cell, offX + w * cell, offY + y * cell); }
+}
+
+// 绘制自动图例：色块 + 色号 + 名称 + 粒数
+// opts: { ctx, panel, startX, startY, rowH, title, cols, colWidth, countX }
+//   panel: [{ hex, code, name, count, sym? }]，带 sym（字母）时在图例里一并显示，
+//          与打印图格子上叠加的符号对应，方便按符号找色
+//   cols/colWidth: 多列排布（默认 1 列保持旧版观感），按「先左右、再换行」填充；
+//                  多列时请同时把 countX 调小（默认 320 会串到下一列）
+//   返回图例底部的 y 坐标，便于调用方计算画布高度
+function drawLegend(ctx, opts) {
+  const { panel, startX, startY, rowH, title } = opts;
+  const cols = Math.max(1, opts.cols || 1);
+  const colWidth = opts.colWidth || 0;
+  const countX = opts.countX || 320;
+  let ly = startY;
+  if (title) {
+    ctx.fillStyle = '#333';
+    ctx.font = '600 18px sans-serif';
+    ctx.fillText(title, startX, ly);
+    ly += 26;
+  }
+  const top = ly;
+  ctx.font = '15px sans-serif';
+  panel.forEach((c, i) => {
+    const col = cols > 1 ? i % cols : 0;
+    const row = cols > 1 ? Math.floor(i / cols) : i;
+    const x = startX + col * colWidth;
+    const y = top + row * rowH;
+    ctx.fillStyle = c.hex;
+    ctx.fillRect(x, y, 24, 24);
+    ctx.strokeStyle = '#ccc';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, 24, 24);
+    ctx.fillStyle = '#222';
+    ctx.fillText(`${c.sym ? c.sym + '  ' : ''}${c.code} ${c.name}`, x + 36, y + 18);
+    ctx.fillText(`×${c.count}`, x + countX, y + 18);
+  });
+  const rows = Math.max(1, Math.ceil(panel.length / cols));
+  return top + rows * rowH;
+}
+
+module.exports = { drawGrid, drawBeadCell, drawCoordLines, drawLegend };
+
+const render = module.exports;
+
+const W = 24, H = 24, CELL = 30;
+const GRID = [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,2,2,2,2,4,4,4,4,4,4,4,4,4,1,1,1,1,4,4,4,4,4,4,2,6,6,6,6,2,4,4,4,4,4,4,4,1,1,1,1,1,1,4,4,4,4,2,6,6,6,6,6,6,2,4,4,3,3,3,3,1,1,1,1,1,1,3,3,3,3,2,6,6,6,6,6,6,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,6,6,6,6,6,6,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,6,6,6,6,6,6,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,2,6,6,6,6,2,3,3,3,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,2,2,2,2,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8];
+const META = {"1":{"rgb":[255,255,255],"hex":"#FFFFFF","code":"C01","name":"White"},"2":{"rgb":[26,26,26],"hex":"#1A1A1A","code":"C02","name":"Black"},"3":{"rgb":[135,206,235],"hex":"#87CEEB","code":"C16","name":"Light Blue"},"4":{"rgb":[0,0,255],"hex":"#0000FF","code":"C17","name":"Blue"},"5":{"rgb":[174,198,207],"hex":"#AEC6CF","code":"C15","name":"Pastel Blue"},"6":{"rgb":[255,230,0],"hex":"#FFE600","code":"C05","name":"Yellow"},"7":{"rgb":[0,128,0],"hex":"#008000","code":"C22","name":"Green"},"8":{"rgb":[144,238,144],"hex":"#90EE90","code":"C21","name":"Light Green"}};
+const PANEL = [{"id":8,"rgb":[144,238,144],"hex":"#90EE90","code":"C21","name":"Light Green","count":168},{"id":7,"rgb":[0,128,0],"hex":"#008000","code":"C22","name":"Green","count":120},{"id":5,"rgb":[174,198,207],"hex":"#AEC6CF","code":"C15","name":"Pastel Blue","count":92},{"id":4,"rgb":[0,0,255],"hex":"#0000FF","code":"C17","name":"Blue","count":68},{"id":3,"rgb":[135,206,235],"hex":"#87CEEB","code":"C16","name":"Light Blue","count":60},{"id":6,"rgb":[255,230,0],"hex":"#FFE600","code":"C05","name":"Yellow","count":32},{"id":2,"rgb":[26,26,26],"hex":"#1A1A1A","code":"C02","name":"Black","count":20},{"id":1,"rgb":[255,255,255],"hex":"#FFFFFF","code":"C01","name":"White","count":16}];
+const TOTAL = 576;
+
+// 画布尺寸与版式参数：两侧完全一致，唯一差别是渲染模式/色号/图例列数
+function layout(node) {
+  const margin = 34, titleH = 62, coord = 30;
+  const gridW = CELL * W, gridH = CELL * H;
+  const legendRowH = 34;
+  const cols = PANEL.length > 6 ? 3 : (PANEL.length > 3 ? 2 : 1);
+  const legendRows = Math.max(1, Math.ceil(PANEL.length / cols));
+  const legendColW = 300;
+  const cw = Math.max(gridW + coord + margin * 2, cols * legendColW + margin * 2);
+  const ch = margin + titleH + coord + gridH + 46 + (26 + legendRows * legendRowH) + margin;
+  node.width = cw; node.height = ch;
+  const ctx = node.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch);
+  return { ctx, cw, ch, margin, titleH, coord, gridW, gridH, legendRowH, cols, legendColW };
+}
+
+function drawAxis(ctx, gx, gy) {
+  const step = CELL >= 14 ? 1 : (CELL >= 8 ? 2 : 5);
+  ctx.fillStyle = '#444'; ctx.font = '15px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (let x = 0; x < W; x++) if (x === 0 || (x + 1) % step === 0) ctx.fillText(String(x + 1), gx + x * CELL + CELL / 2, gy - 16);
+  for (let y = 0; y < H; y++) if (y === 0 || (y + 1) % step === 0) ctx.fillText(String(y + 1), gx - 16, gy + y * CELL + CELL / 2);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+}
+
+/* ---- 旧版：bead + 无码 + 单列图例 + 每10格坐标线 ---- */
+(function () {
+  const L = layout(document.getElementById('oldCv'));
+  const { ctx, cw, ch, margin, titleH, coord, gridW, gridH } = L;
+  ctx.fillStyle = '#222'; ctx.font = '600 26px sans-serif';
+  ctx.fillText('拼豆图纸 ' + W + '×' + H + '（' + TOTAL + '粒）', margin, margin + 26);
+
+  const gx = Math.round((cw - gridW) / 2), gy = margin + titleH + coord;
+  drawAxis(ctx, gx, gy);
+  render.drawGrid(ctx, { grid: GRID, w: W, h: H, cell: CELL, offX: gx, offY: gy, colorMeta: META, mode: 'bead' });
+  render.drawCoordLines(ctx, { w: W, h: H, cell: CELL, offX: gx, offY: gy });
+  render.drawLegend(ctx, { panel: PANEL, startX: margin, startY: gy + gridH + 46, rowH: 40, title: '色卡 / 用量' });
+})();
+
+/* ---- 新版：pixel + 格内色号 + 多列图例 + 分级坐标线 + 边框/副信息 ---- */
+(function () {
+  const L = layout(document.getElementById('newCv'));
+  const { ctx, cw, ch, margin, titleH, coord, gridW, gridH, legendRowH, cols, legendColW } = L;
+  ctx.strokeStyle = '#e6e6e6'; ctx.lineWidth = 2; ctx.strokeRect(1, 1, cw - 2, ch - 2);
+  ctx.fillStyle = '#222'; ctx.font = '600 30px sans-serif';
+  ctx.fillText('拼豆图纸 ' + W + '×' + H, margin, margin + 30);
+  ctx.fillStyle = '#777'; ctx.font = '17px sans-serif';
+  ctx.fillText('共 ' + TOTAL + ' 粒 · ' + PANEL.length + ' 色 · 每格标注色号 · 2026-09-11', margin, margin + 58);
+
+  const gx = Math.round((cw - gridW) / 2), gy = margin + titleH + coord;
+  drawAxis(ctx, gx, gy);
+  render.drawGrid(ctx, { grid: GRID, w: W, h: H, cell: CELL, offX: gx, offY: gy, colorMeta: META, mode: 'pixel', showCode: true, labelMinCell: 10 });
+  render.drawCoordLines(ctx, { w: W, h: H, cell: CELL, offX: gx, offY: gy, emphasis: true });
+  render.drawLegend(ctx, {
+    panel: PANEL, startX: margin, startY: gy + gridH + 46, rowH: legendRowH,
+    title: '色卡 / 用量（购买量已含 5% 备用）',
+    cols: cols, colWidth: legendColW, countX: 240
+  });
+})();
+</script>
+</body>
+</html>

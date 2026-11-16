@@ -1,0 +1,31 @@
+# ---- 历史遗留（一次性调试/验证脚本与中间产物，不进版本库）----
+legacy/
+
+# ---- 系统/编辑器 ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# ---- 依赖 ----
+node_modules/
+
+# ---- 小程序开发者工具本地配置（含个人路径，不共享）----
+project.private.config.json
+
+# ---- 运行期产物 ----
+outputs/*
+!outputs/方案A_真机验证报告.md
+verification/.diag_tmp/
+verification/_archive/
+
+# ---- 快照仓库额外排除（私人素材 / 本地配置 / 内部笔记）----
+.workbuddy/
+inputs/
+outputs/
+CLAUDE.md
+project.private.config.json
+legacy/
+verification/_archive/
+verification/.diag_tmp/

@@ -1,0 +1,199 @@
+/* 首页样式：只保留入口区（hero / 上传卡 / 引导 banner / 更多功能网格）
+   原「图片预览 + 调整 + 裁剪 + 笔刷」相关样式已随逻辑迁移到 pages/adjust/adjust.wxss */
+
+/* === Hero 顶部 === */
+.hero {
+  height: 160rpx;
+  background: linear-gradient(135deg, #ff9a8b 0%, #ff7a45 100%);
+  border-radius: 16rpx;
+  margin: 16rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.hero-title {
+  color: #fff;
+  font-size: 40rpx;
+  font-weight: 600;
+  letter-spacing: 4rpx;
+}
+
+/* === 大上传卡 === */
+.upload-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 60rpx 0;
+  margin: 16rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.upload-plus {
+  width: 110rpx;
+  height: 110rpx;
+  background: #ff7a45;
+  color: #fff;
+  border-radius: 24rpx;
+  font-size: 70rpx;
+  line-height: 110rpx;
+  text-align: center;
+  font-weight: 300;
+  margin-bottom: 24rpx;
+}
+.upload-title {
+  font-size: 32rpx;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 10rpx;
+}
+.upload-sub {
+  font-size: 24rpx;
+  color: #999;
+}
+
+/* === 未完成草稿卡 === */
+.draft-card {
+  background: #fff7f2;
+  border: 2rpx solid #ffd9c7;
+  border-radius: 16rpx;
+  padding: 24rpx 28rpx;
+  margin: 16rpx 0;
+  display: flex;
+  align-items: center;
+}
+.draft-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.draft-icon {
+  width: 64rpx;
+  height: 64rpx;
+  background: #ff7a45;
+  color: #fff;
+  border-radius: 32rpx;
+  text-align: center;
+  line-height: 64rpx;
+  font-size: 32rpx;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+.draft-text { flex: 1; min-width: 0; }
+.draft-title {
+  display: block;
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 600;
+}
+.draft-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #b06a45;
+  margin-top: 4rpx;
+}
+.draft-cta {
+  color: #ff7a45;
+  font-size: 26rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+.draft-discard {
+  color: #999;
+  font-size: 24rpx;
+  padding: 8rpx 0 8rpx 24rpx;
+  flex-shrink: 0;
+}
+
+/* === 引导 banner === */
+.guide-banner {
+  background: linear-gradient(90deg, #ff9966 0%, #ff7a45 100%);
+  border-radius: 16rpx;
+  padding: 24rpx 32rpx;
+  margin: 16rpx 0;
+  display: flex;
+  align-items: center;
+}
+.banner-icon {
+  width: 72rpx;
+  height: 72rpx;
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border-radius: 16rpx;
+  text-align: center;
+  line-height: 72rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-right: 24rpx;
+  flex-shrink: 0;
+}
+.banner-text { flex: 1; }
+.banner-title {
+  color: #fff;
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.banner-sub {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 24rpx;
+  margin-top: 4rpx;
+}
+.banner-cta {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.25);
+  padding: 12rpx 20rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  flex-shrink: 0;
+}
+
+/* === 更多功能 2x2 网格 === */
+.section-title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 600;
+  margin: 32rpx 0 16rpx;
+}
+.grid-2x2 {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -12rpx;
+}
+.grid-cell {
+  width: calc(50% - 24rpx);
+  margin: 12rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-sizing: border-box;
+}
+.grid-icon {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 48rpx;
+  color: #fff;
+  font-size: 36rpx;
+  font-weight: 600;
+  text-align: center;
+  line-height: 96rpx;
+  margin-bottom: 16rpx;
+}
+.icon-yellow { background: #fac775; }
+.icon-blue { background: #378add; }
+.icon-green { background: #639922; }
+.icon-purple { background: #7f77dd; }
+.grid-title {
+  font-size: 28rpx;
+  color: #333;
+  font-weight: 500;
+  margin-bottom: 6rpx;
+}
+.grid-sub {
+  font-size: 22rpx;
+  color: #999;
+}

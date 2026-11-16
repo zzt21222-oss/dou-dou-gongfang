@@ -1,0 +1,36 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/adjust/adjust",
+    "pages/editor/editor",
+    "pages/preview/preview",
+    "pages/history/history",
+    "pages/guide/guide",
+    "pages/colorpicker/colorpicker"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "拼豆图纸",
+    "backgroundColor": "#f5f6f8",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "color": "#888888",
+    "selectedColor": "#ff7a45",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "制作"
+      },
+      {
+        "pagePath": "pages/history/history",
+        "text": "历史"
+      }
+    ]
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2"
+}

@@ -1,0 +1,68 @@
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16rpx;
+}
+.brand-label {
+  font-size: 28rpx;
+  color: #333;
+}
+.brand-picker {
+  font-size: 28rpx;
+  color: #ff7a45;
+  padding: 8rpx 20rpx;
+  border: 1rpx solid #ffd8c2;
+  border-radius: 10rpx;
+  background: #fff7f2;
+}
+.canvas-wrap {
+  width: 100%;
+  height: 440rpx;
+  background: #f0f1f3;
+  border-radius: 16rpx;
+  margin: 16rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.pick-canvas {
+  width: 100%;
+  height: 440rpx;
+}
+.big-swatch {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: 16rpx;
+  border: 1rpx solid #ccc;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  margin-left: 20rpx;
+}
+.hex {
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-top: 6rpx;
+}
+.match-list {
+  margin-top: 16rpx;
+}
+.match-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f1f3;
+}
+.minfo {
+  display: flex;
+  flex-direction: column;
+  margin-left: 16rpx;
+  flex: 1;
+}
+.mbrand { font-size: 22rpx; color: #999; }
+.mcode { font-size: 28rpx; font-weight: 600; }
+.mhex { font-size: 22rpx; color: #aaa; }
+.mcount { font-size: 22rpx; color: #999; }
